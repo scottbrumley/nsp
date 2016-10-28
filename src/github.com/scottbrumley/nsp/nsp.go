@@ -111,7 +111,7 @@ func SshCommand(lclParms ParamStruct)(string){
 	return b.String()
 }
 
-func SshMultiple(hosts chan Sensors,results chan string ,lclParms ParamStruct){
+func SshMultiple(hosts chan Sensors,results chan string ,lclParms ParamStruct) {
 	for host := range hosts {
 		//fmt.Println(lclDevice.Name)
 		config := &ssh.ClientConfig{
@@ -122,27 +122,36 @@ func SshMultiple(hosts chan Sensors,results chan string ,lclParms ParamStruct){
 		}
 		client, err := ssh.Dial("tcp", host.Name + ":" + host.Port, config)
 		if err != nil {
-			log.Fatal("Failed to dial: ", err)
-		}
+			//log.Fatal("Failed to dial: ", err)
+			fmt.Println("Failed to Dial " + host.Name)
+			results <- ""
+			return
+		} else {
+			// Each ClientConn can support multiple interactive sessions,
+			// represented by a Session.
+			session, err := client.NewSession()
+			if err != nil {
+				//log.Fatal("Failed to create session: ", err)
+				fmt.Println("Failed to create session: " + host.Name)
+				results <- ""
+				return
+			}
+			defer session.Close()
 
-		// Each ClientConn can support multiple interactive sessions,
-		// represented by a Session.
-		session, err := client.NewSession()
-		if err != nil {
-			log.Fatal("Failed to create session: ", err)
+			// Once a Session is created, you can execute a single command on
+			// the remote side using the Run method.
+			var b bytes.Buffer
+			session.Stdout = &b
+			if err := session.Run(lclParms.Cmd); err != nil {
+				//log.Fatal("Failed to run: " + err.Error())
+				fmt.Println("Failed to run: " + host.Name)
+				results <- ""
+				return
+			}
+			//fmt.Print(b.String())
+			//time.Sleep(time.Second)
+			results <- b.String()
 		}
-		defer session.Close()
-
-		// Once a Session is created, you can execute a single command on
-		// the remote side using the Run method.
-		var b bytes.Buffer
-		session.Stdout = &b
-		if err := session.Run(lclParms.Cmd); err != nil {
-			log.Fatal("Failed to run: " + err.Error())
-		}
-		fmt.Print(b.String())
-		//time.Sleep(time.Second)
-		results <- b.String()
 	}
 }
 
