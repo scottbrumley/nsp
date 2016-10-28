@@ -11,6 +11,8 @@ import (
 	"log"
 	"bytes"
 	"golang.org/x/crypto/ssh"
+	"encoding/csv"
+	"io"
 )
 
 // Parameters from command line
@@ -22,6 +24,11 @@ type ParamStruct struct{
 	HostName string
 	HostFile string
 	HostPort string
+}
+
+type Sensors struct {
+	Name string
+	Port string
 }
 
 func getPasswd()(string){
@@ -102,4 +109,68 @@ func SshCommand(lclParms ParamStruct)(string){
 		log.Fatal("Failed to run: " + err.Error())
 	}
 	return b.String()
+}
+
+func SshMultiple(hosts chan Sensors,results chan string ,lclParms ParamStruct){
+	for host := range hosts {
+		//fmt.Println(lclDevice.Name)
+		config := &ssh.ClientConfig{
+			User: lclParms.UserName,
+			Auth: []ssh.AuthMethod{
+				ssh.Password(lclParms.UserPass),
+			},
+		}
+		client, err := ssh.Dial("tcp", host.Name + ":" + host.Port, config)
+		if err != nil {
+			log.Fatal("Failed to dial: ", err)
+		}
+
+		// Each ClientConn can support multiple interactive sessions,
+		// represented by a Session.
+		session, err := client.NewSession()
+		if err != nil {
+			log.Fatal("Failed to create session: ", err)
+		}
+		defer session.Close()
+
+		// Once a Session is created, you can execute a single command on
+		// the remote side using the Run method.
+		var b bytes.Buffer
+		session.Stdout = &b
+		if err := session.Run(lclParms.Cmd); err != nil {
+			log.Fatal("Failed to run: " + err.Error())
+		}
+		fmt.Print(b.String())
+		//time.Sleep(time.Second)
+		results <- b.String()
+	}
+}
+
+func GetSensorList(fileName string)(retVal []Sensors){
+	var lclRecord Sensors
+	// Load a TXT file.
+	fileName = strings.Replace(fileName,"\\","\\\\",1)
+	f, _ := os.Open(fileName)
+
+	// Create a new reader.
+	r := csv.NewReader(bufio.NewReader(f))
+	lineNumber := 0
+	for {
+		record, err := r.Read()
+		// Stop at EOF.
+		if err == io.EOF {
+			break
+		}
+
+		//fmt.Printf("Print Line #%v\n", lineNumber)
+		//fmt.Printf("%v     %v\n",record[0],record[1])
+
+		if (record[0] != "hostname") {
+			lclRecord.Name = string(record[0])
+			lclRecord.Port = string(record[1])
+			retVal = append(retVal, lclRecord)
+		}
+		lineNumber = lineNumber + 1
+	}
+	return retVal
 }
