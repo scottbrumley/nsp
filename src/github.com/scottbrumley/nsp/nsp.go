@@ -123,7 +123,7 @@ func SshMultiple(hosts chan Sensors,results chan string ,lclParms ParamStruct) {
 		client, err := ssh.Dial("tcp", host.Name + ":" + host.Port, config)
 		if err != nil {
 			//log.Fatal("Failed to dial: ", err)
-			fmt.Println("Failed to Dial " + host.Name)
+			fmt.Printf("Failed to Dial " + host.Name + " %v\n", err)
 			results <- ""
 			return
 		} else {
@@ -132,7 +132,7 @@ func SshMultiple(hosts chan Sensors,results chan string ,lclParms ParamStruct) {
 			session, err := client.NewSession()
 			if err != nil {
 				//log.Fatal("Failed to create session: ", err)
-				fmt.Println("Failed to create session: " + host.Name)
+				fmt.Printf("Failed to create session: " + host.Name + " %v\n", err)
 				results <- ""
 				return
 			}
@@ -143,12 +143,12 @@ func SshMultiple(hosts chan Sensors,results chan string ,lclParms ParamStruct) {
 			var b bytes.Buffer
 			session.Stdout = &b
 			if err := session.Run(lclParms.Cmd); err != nil {
-				//log.Fatal("Failed to run: " + err.Error())
-				fmt.Println("Failed to run: " + host.Name)
+				fmt.Printf("Failed to run: " + host.Name + " %v\n", err)
+				//log.Fatal("Failed to run: ", err)
 				results <- ""
 				return
 			}
-			//fmt.Print(b.String())
+			fmt.Print(b.String())
 			//time.Sleep(time.Second)
 			results <- b.String()
 		}

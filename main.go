@@ -13,18 +13,13 @@ func main() {
 	results := make(chan string)
 	var totalBlackListFiles int64
 
-	//errors := make(chan error)
-
-//	fmt.Println(getValue("blahbalh Number of response Received: 5000 \n","Number of response Received:"))
-//	os.Exit(1)
 
 	myParms := nsp.GetParams()
-	//fmt.Print(nsp.SshCommand(myParms))
 	deviceList := nsp.GetSensorList("sensors.csv")
 
 	fmt.Println("Spin up workers")
 	// Spin up 10 workers which block until there is work
-	for w := 1; w <= 10; w++ {
+	for w := 1; w <= 100; w++ {
 		go nsp.SshMultiple(hosts,results,myParms)
 	}
 
